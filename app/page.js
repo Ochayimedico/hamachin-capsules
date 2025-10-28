@@ -1,3 +1,8 @@
+"use client";
+
+import { supabase } from "./supabase";
+import React, { useState } from "react";
+
 import Image from "next/image";
 import img1 from "../public/hemachin-img-1.jpeg";
 import img2 from "../public/hemachin-img-2.jpeg";
@@ -24,6 +29,106 @@ import star from "../public/star.png";
 import checkbox from "../public/checkbox.png";
 
 export default function Home() {
+  const [name, setName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [emailAddress, setEmailAddress] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [selectedPackage, setSelectedPackage] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const nameInput = (e) => {
+    setName(e.target.value);
+  };
+  const phoneNumberInput = (e) => {
+    setPhoneNumber(e.target.value);
+  };
+  const emailAddressInput = (e) => {
+    setEmailAddress(e.target.value);
+  };
+  const deliveryAddressInput = (e) => {
+    setDeliveryAddress(e.target.value);
+  };
+  const packageInput = (e) => {
+    setSelectedPackage(e.target.value);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    console.log(
+      "name:",
+      name,
+      "email:",
+      emailAddress,
+      "address:",
+      deliveryAddress,
+      "phone:",
+      phoneNumber,
+      "package:",
+      selectedPackage
+    );
+
+    try {
+      // First, save to Supabase database
+      const { data, error } = await supabase.from("users").insert({
+        name: name,
+        delivery_address: deliveryAddress,
+        email_address: emailAddress,
+        phone_number: phoneNumber,
+        selected_package: selectedPackage,
+      });
+
+      if (error) {
+        console.log("Supabase error", error.message);
+        throw error;
+      }
+
+      console.log("info submitted", data);
+
+      // Then, send emails via Edge Function
+      const { data: emailData, error: emailError } =
+        await supabase.functions.invoke("send-email", {
+          body: {
+            formData: {
+              name: name,
+              email: emailAddress,
+              deliveryAddress: deliveryAddress,
+              phoneNumber: phoneNumber,
+              selectedPackage: selectedPackage,
+              submittedAt: new Date().toISOString(),
+            },
+            userEmail: emailAddress,
+            userName: name,
+          },
+        });
+
+      if (emailError) {
+        console.log("Edge Function error", emailError);
+        throw emailError;
+      }
+
+      console.log("Email sent successfully", emailData);
+
+      // Show success message
+      alert(
+        "Order submitted successfully! You will receive a confirmation email shortly."
+      );
+
+      // Reset form
+      setName("");
+      setPhoneNumber("");
+      setEmailAddress("");
+      setDeliveryAddress("");
+      setSelectedPackage("");
+    } catch (error) {
+      console.log("Error:", error);
+      alert("Failed to submit order. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="font-sans gap-16 leading-[2em] text-[1.25rem]">
       <main className="p-8 flex flex-col gap-[32px]  leading-[2.2em] pb-10 w-full">
@@ -50,14 +155,14 @@ export default function Home() {
           </h2>
 
           <p className="text-[1.25rem] ">
-            You’ve tried antibiotics and creams.
+            You've tried antibiotics and creams.
           </p>
           <p className="text-[1.25rem]">
-            You’ve endured the burning sensations, foul discharge, rashes, and
+            You've endured the burning sensations, foul discharge, rashes, and
             itching in silence.
           </p>
           <p className="text-[1.25rem]">
-            You’ve hoped it would go away— But it keeps coming back. Worse, it’s
+            You've hoped it would go away— But it keeps coming back. Worse, it's
             affecting your relationship, your confidence, and your peace of
             mind.
           </p>
@@ -90,9 +195,9 @@ export default function Home() {
           height={800}
         ></Image>
         <p className="text-[2.2rem] font-bold text-center capitalize text-red-500">
-          If you’re dealing with STDs, STIs, stubborn infections, genital
+          If you're dealing with STDs, STIs, stubborn infections, genital
           itching, or mysterious skin rashes, Hamachin Detox Herbal Capsule is
-          the trusted solution you’ve been waiting for
+          the trusted solution you've been waiting for
         </p>
         <div className="w-full h-[5px] bg-red-500"></div>
         <p className="text-[2.2rem] font-bold text-center">
@@ -120,7 +225,7 @@ export default function Home() {
             Hamachin Detox Herbal Capsule is different.
           </span>
           <br />
-          It’s a <span className="font-bold">powerful herbal formula</span>{" "}
+          It's a <span className="font-bold">powerful herbal formula</span>{" "}
           designed to
           <span className="font-bold"> flush out the root cause </span>of all
           STDs, STIs, and recurring infections from your blood, reproductive
@@ -267,7 +372,7 @@ export default function Home() {
         ></Image>
 
         <h3 className="uppercase font-bold text-red-500 text-[1.5rem]">
-          What You’ll Experience in 7 Days
+          What You'll Experience in 7 Days
         </h3>
         <p className="">
           <span className="font-bold"> Day 1-2: </span>Itching reduces,
@@ -515,7 +620,7 @@ export default function Home() {
             ready to reclaim your health and freedom?
           </h3>
           <p className="">
-            Don’t let another day pass with pain, fear, or shame.
+            Don't let another day pass with pain, fear, or shame.
           </p>
           <p className="">
             Join the hundreds of men and women in Ghana who have experienced a
@@ -554,13 +659,12 @@ export default function Home() {
             We understand how difficult it is for you to buy items online but
             based on feedbacks from over
             <span className="font-bold">
-              {" "}
               1,455 all over the world, this product works.
             </span>
           </p>
           <p className="text-[1.2rem] mt-4">
             But just to show you how confident we are in our product and how
-            committed we are to your health, here is our “No Bullshit”
+            committed we are to your health, here is our "No Bullshit"
             Guaranteed…
           </p>
         </div>
@@ -569,10 +673,13 @@ export default function Home() {
         <h3 className="capitalize text-[2rem] font-bold text-center mb-4 px-2 lg:text-[2.25rem]">
           kindly fill the order form here
         </h3>
-        <div className="bg-blue-800 w-full ">
-          <form className="p-8 text-[1.15rem] lg:w-6/10  md:w-6/10 mx-auto">
+        <div className="bg-blue-800 w-full">
+          <form
+            onSubmit={handleSubmit}
+            className="p-8 text-[1.15rem] lg:w-6/10  md:w-6/10 mx-auto"
+          >
             <div className="flex flex-col bg-white py-2 px-4 text-black-500 mb-4 w-full rounded-[6px]">
-              <label for="name" className="font-bold">
+              <label htmlFor="name" className="font-bold">
                 Name:
               </label>
               <input
@@ -581,58 +688,103 @@ export default function Home() {
                 placeholder="Input Your Name"
                 id="name"
                 name="name"
-                minlength="4"
+                minLength="4"
+                value={name}
+                onChange={nameInput}
+                required
               ></input>
             </div>
             <div className="flex flex-col bg-white py-2 px-4 text-black-500 mb-4 w-full rounded-[6px]">
-              <label for="address" className="font-bold">
-                Full Address:*
+              <label htmlFor="email-address" className="font-bold">
+                Email Address:*
+              </label>
+              <input
+                className="border-[#9d9d9d] border border-2 rounded-[6px] p-2 mb-4"
+                type="email"
+                placeholder="Input Your Email Address"
+                id="email-address"
+                name="email-address"
+                minLength="8"
+                value={emailAddress}
+                required
+                onChange={emailAddressInput}
+              ></input>
+            </div>
+            <div className="flex flex-col bg-white py-2 px-4 text-black-500 mb-4 w-full rounded-[6px]">
+              <label htmlFor="address" className="font-bold">
+                Full House Address:*
               </label>
               <input
                 className="p-2 mb-4 border-[#9d9d9d] border border-2 rounded-[6px]"
-                type="address"
+                type="text"
                 placeholder="Input Your Delivery Address"
                 id="address"
                 name="address"
-                minlength="10"
+                minLength="10"
+                value={deliveryAddress}
+                onChange={deliveryAddressInput}
                 required
               ></input>
             </div>
             <div className="round-4px flex flex-col bg-white py-2 px-4 text-black-500 mb-4 w-full rounded-[6px]">
-              <label for="phone-number" className="font-bold">
+              <label htmlFor="phone-number" className="font-bold">
                 Phone Number:*
               </label>
               <input
                 className="p-2 mb-2 border-[#9d9d9d] border border-2 rounded-[6px]"
-                type="text"
+                type="tel"
                 placeholder="Input Your Phone Number"
                 id="phone-number"
                 name="phone-number"
-                minlength="11"
+                minLength="11"
+                value={phoneNumber}
+                onChange={phoneNumberInput}
                 required
               ></input>
             </div>
             <fieldset className="text-white leading-[1.75em]">
               <legend className="font-bold text-[1.5rem]  uppercase my-2">
-                quantity needed:
+                quantity needed:*
               </legend>
 
-              <div className="">
-                <input className="" type="checkbox" id="one" name="one" />
-                <label for="one" className="m-2">
+              <div className="mb-2">
+                <input
+                  className="mr-2"
+                  type="radio"
+                  id="one"
+                  name="package"
+                  value="1 PIECE OF HAMACHIN DETOX + ONE EXTRA IS 250 GHc"
+                  onChange={packageInput}
+                  required
+                />
+                <label htmlFor="one">
                   1 PIECE OF HAMACHIN DETOX + ONE EXTRA IS 250 GHc
                 </label>
               </div>
 
-              <div>
-                <input type="checkbox" id="two" name="two" />
-                <label for="two" className="m-2">
+              <div className="mb-2">
+                <input
+                  className="mr-2"
+                  type="radio"
+                  id="two"
+                  name="package"
+                  value="2 PIECES OF HAMACHIN DETOX + TWO EXTRA IS 450 GHc"
+                  onChange={packageInput}
+                />
+                <label htmlFor="two">
                   2 PIECES OF HAMACHIN DETOX + TWO EXTRA IS 450 GHc
                 </label>
               </div>
-              <div>
-                <input type="checkbox" id="three" name="three" />
-                <label for="three" className="m-2">
+              <div className="mb-2">
+                <input
+                  className="mr-2"
+                  type="radio"
+                  id="three"
+                  name="package"
+                  value="3 PIECES OF HAMACHIN DETOX + THREE EXTRA IS 600 GHc"
+                  onChange={packageInput}
+                />
+                <label htmlFor="three">
                   3 PIECES OF HAMACHIN DETOX + THREE EXTRA IS 600 GHc
                 </label>
               </div>
